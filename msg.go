@@ -45,7 +45,7 @@ func handleMessage(rawMessage []byte) {
 // getFilename generates a filename with the given base name and extension incorporating the current UTC time.
 func getFilename(baseName, extension string) string {
 	currentTime := time.Now().UTC()
-	timestamp := currentTime.Format("20060102-150405") // YYYYMMDD-HHMMSS format
+	timestamp := currentTime.Format("2017-09-07 17:06:04.000") // YYYYMMDD-HHMMSS format
 	return fmt.Sprintf("%s-%s.%s", baseName, timestamp, extension)
 }
 
