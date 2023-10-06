@@ -62,7 +62,7 @@ func handleMsg(conn net.Conn) {
 		scanner := bufio.NewScanner(tcpConn) // Create a scanner
 		for scanner.Scan() {                 // Scan the connection
 			rawMessage := scanner.Bytes() // Get the message as bytes
-			handleMessage(rawMessage)     // Handle the message
+			HandleMessage(rawMessage)     // Handle the message
 			fmt.Println("TCP Message Received:", scanner.Text())
 		}
 
@@ -82,7 +82,7 @@ func handleMsg(conn net.Conn) {
 		}
 
 		rawMessage := buf[:n]
-		handleMessage(rawMessage)
+		HandleMessage(rawMessage)
 		fmt.Println("UDP Message Received:", string(rawMessage))
 		return
 	}

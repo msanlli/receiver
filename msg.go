@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func handleMessage(rawMessage []byte) {
+func HandleMessage(rawMessage []byte) {
 	var msg Message
 	err := json.Unmarshal(rawMessage, &msg) // Parse the message
 	if err != nil {

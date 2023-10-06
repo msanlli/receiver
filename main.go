@@ -17,7 +17,7 @@ type Data struct {
 	Value float32 `json:"value"`
 }
 
-func main() {
+func Main() {
 	go startTCP()
 	startUDP()
 }
