@@ -12,7 +12,11 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
+<<<<<<< HEAD
         go-version: ^1.21
+=======
+        go-version: ^1.17
+>>>>>>> a34da62cae42bb25ea6d9e4b1c7336f594e46ae9
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
