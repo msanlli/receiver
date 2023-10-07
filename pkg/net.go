@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"bufio"
@@ -10,7 +10,8 @@ import (
 func startTCP() {
 	listener, err := net.Listen("tcp", ":8080") // Listens on port 8080
 	if err != nil {
-		fmt.Println("Error:", err)
+		LogBuffer.WriteString("Error: ")
+		println("Error starting TCP:", err)
 		return
 	}
 	defer listener.Close() // Close the listener when the function returns
@@ -18,7 +19,8 @@ func startTCP() {
 	for {
 		conn, err := listener.Accept() // Wait for a connection
 		if err != nil {
-			fmt.Println("Connection Error:", err)
+			LogBuffer.WriteString("Error: ")
+			println("Error starting TCP connection:", err)
 			continue
 		}
 		go handleMsg(conn) // Handle connection in a new goroutine
@@ -29,13 +31,15 @@ func startTCP() {
 func startUDP() {
 	addr, err := net.ResolveUDPAddr("udp", ":8081") // Listens on port 8081
 	if err != nil {
-		fmt.Println("Error:", err)
+		LogBuffer.WriteString("Error: ")
+		println("Error starting UDP server:", err)
 		return
 	}
 
 	conn, err := net.ListenUDP("udp", addr) // Listen on the port
 	if err != nil {
-		fmt.Println("Error:", err)
+		LogBuffer.WriteString("Error: ")
+		println("Error starting UDP listener:", err)
 		return
 	}
 	defer conn.Close() // Close the listener when the function returns
@@ -45,7 +49,8 @@ func startUDP() {
 	for {
 		n, _, err := conn.ReadFromUDP(buf) // Read from the connection
 		if err != nil {
-			fmt.Println("Reading Error:", err)
+			LogBuffer.WriteString("Error: ")
+			println("Error starting UDP connection:", err)
 			continue
 		}
 
@@ -67,7 +72,9 @@ func handleMsg(conn net.Conn) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			fmt.Println("Error reading from TCP:", err)
+			LogBuffer.WriteString("Error: ")
+			println("Error scanning:", err)
+			return
 		}
 		return
 	}
@@ -77,7 +84,8 @@ func handleMsg(conn net.Conn) {
 		buf := make([]byte, 1024)
 		n, _, err := udpConn.ReadFromUDP(buf)
 		if err != nil {
-			fmt.Println("Reading Error from UDP:", err)
+			LogBuffer.WriteString("Error: ")
+			println("Error starting UDP connection")
 			return
 		}
 
@@ -88,5 +96,6 @@ func handleMsg(conn net.Conn) {
 	}
 
 	// Unsupported connection type
-	fmt.Println("Unsupported connection type")
+	LogBuffer.WriteString("Unsupported connection type: ")
+	println("Unsupported connection type: ")
 }
