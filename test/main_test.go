@@ -1,64 +1,91 @@
-package pkg
+package test
 
 import (
 	"os"
 	"testing"
 
-	pkg "receiver.com/m/pkg"
+	"receiver.com/m/pkg"
 )
 
-func TestHandleMessage(t *testing.T) {
-	// Sample input messages
-	alertMessage := `{
-		"Type": "alert",
-		"Payload": {
-			"Event": "Fire",
-			"Date": 1633801090
-		}
-	}`
-	dataMessage := `{
-		"Type": "data",
-		"Payload": {
-			"Name": "Temperature",
-			"Value": 32.5
-		}
-	}`
+func readFileContent(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
 
+func TestHandleMessage(t *testing.T) {
 	tests := []struct {
-		input string
+		input        []byte
+		expectedJSON string
+		expectedYAML string
+		expectedTOML string
+		jsonFilePath string
+		yamlFilePath string
+		tomlFilePath string
 	}{
-		{alertMessage},
-		{dataMessage},
+		{
+			input: []byte(`{
+                "Type": "alert",
+                "Payload": "{\"Date\":42,\"Event\":\"Test\"}"
+            }`),
+			expectedJSON: "Alert received",
+			expectedYAML: "Alert received",
+			expectedTOML: "Alert received",
+			jsonFilePath: "./alert/alert.json",
+			yamlFilePath: "./alert/alert.yaml",
+			tomlFilePath: "./alert/alert.toml",
+		},
+		{
+			input: []byte(`{
+                "Type": "data",
+                "Payload": "{\"Name\":\"Test\",\"Value\":42.42}"
+            }`),
+			expectedJSON: "Alert received",
+			expectedYAML: "Alert received",
+			expectedTOML: "Alert received",
+			jsonFilePath: "./data/data.json",
+			yamlFilePath: "./data/data.yaml",
+			tomlFilePath: "./data/data.toml",
+		},
 	}
 
-	for _, tt := range tests {
-		// Create temporary files for JSON, YAML, and TOML
-		jsonFile, err := os.CreateTemp("", "test-*.json")
+	for _, test := range tests {
+		pkg.HandleMessage(test.input)
+
+		// Check the content of the JSON file for validation
+		contentJSON, err := readFileContent(test.jsonFilePath)
 		if err != nil {
-			t.Fatalf("Failed to create temp JSON file: %v", err)
+			t.Fatal(err)
 		}
 
-		yamlFile, err := os.CreateTemp("", "test-*.yaml")
-		if err != nil {
-			t.Fatalf("Failed to create temp YAML file: %v", err)
+		if contentJSON != test.expectedJSON {
+			t.Errorf("(JSON) For input %s, expected %s, but got %s", string(test.input), test.expectedJSON, contentJSON)
 		}
 
-		tomlFile, err := os.CreateTemp("", "test-*.toml")
+		contentYAML, err := readFileContent(test.yamlFilePath)
 		if err != nil {
-			t.Fatalf("Failed to create temp TOML file: %v", err)
+			t.Fatal(err)
 		}
 
-		// Call HandleMessage (Note: this assumes it uses the above files to write logs.
-		// If not, then we need some mechanism to redirect its output to these files)
-		pkg.HandleMessage([]byte(tt.input))
+		if contentYAML != test.expectedYAML {
+			t.Errorf("(YAML) For input %s, expected %s, but got %s", string(test.input), test.expectedYAML, contentYAML)
+		}
 
-		// Cleanup: Close and remove temporary files
-		jsonFile.Close()
-		yamlFile.Close()
-		tomlFile.Close()
+		contentTOML, err := readFileContent(test.jsonFilePath)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		os.Remove(jsonFile.Name())
-		os.Remove(yamlFile.Name())
-		os.Remove(tomlFile.Name())
+		if contentTOML != test.expectedTOML {
+			t.Errorf("(TOML) For input %s, expected %s, but got %s", string(test.input), test.expectedTOML, contentTOML)
+		}
+		// Similarly, you can add checks for the yaml and toml files if needed
+
+		// Delete the files after checking
+		//os.Remove(test.jsonFilePath)
+		//os.Remove(test.yamlFilePath)
+		//os.Remove(test.tomlFilePath)
 	}
 }
