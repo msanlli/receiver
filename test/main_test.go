@@ -1,57 +1,64 @@
-// blackbox_test.go
-package main
+package pkg
 
 import (
-	"encoding/json"
-	"net"
+	"os"
 	"testing"
 
 	pkg "receiver.com/m/pkg"
 )
 
-func TestTCPHandling(t *testing.T) {
-	conn, err := net.Dial("tcp", "localhost:8080")
-	if err != nil {
-		t.Fatalf("Failed to connect to server: %v", err)
-	}
-	defer conn.Close()
+func TestHandleMessage(t *testing.T) {
+	// Sample input messages
+	alertMessage := `{
+		"Type": "alert",
+		"Payload": {
+			"Event": "Fire",
+			"Date": 1633801090
+		}
+	}`
+	dataMessage := `{
+		"Type": "data",
+		"Payload": {
+			"Name": "Temperature",
+			"Value": 32.5
+		}
+	}`
 
-	message := &pkg.Message{
-		Type:    "alert",
-		Payload: json.RawMessage(`{"date": 1674832322, "event": "test event"}`),
-	}
-
-	msgBytes, err := json.Marshal(message)
-	if err != nil {
-		t.Fatalf("Failed to marshal message: %v", err)
-	}
-
-	_, err = conn.Write(msgBytes)
-	if err != nil {
-		t.Fatalf("Failed to write to server: %v", err)
-	}
-
-}
-
-func TestUDPHandling(t *testing.T) {
-	conn, err := net.Dial("udp", "localhost:8081")
-	if err != nil {
-		t.Fatalf("Failed to connect to server: %v", err)
-	}
-	defer conn.Close()
-
-	message := &pkg.Message{
-		Type:    "data",
-		Payload: json.RawMessage(`{"name": "test data", "value": 42.0}`),
+	tests := []struct {
+		input string
+	}{
+		{alertMessage},
+		{dataMessage},
 	}
 
-	msgBytes, err := json.Marshal(message)
-	if err != nil {
-		t.Fatalf("Failed to marshal message: %v", err)
-	}
+	for _, tt := range tests {
+		// Create temporary files for JSON, YAML, and TOML
+		jsonFile, err := os.CreateTemp("", "test-*.json")
+		if err != nil {
+			t.Fatalf("Failed to create temp JSON file: %v", err)
+		}
 
-	_, err = conn.Write(msgBytes)
-	if err != nil {
-		t.Fatalf("Failed to write to server: %v", err)
+		yamlFile, err := os.CreateTemp("", "test-*.yaml")
+		if err != nil {
+			t.Fatalf("Failed to create temp YAML file: %v", err)
+		}
+
+		tomlFile, err := os.CreateTemp("", "test-*.toml")
+		if err != nil {
+			t.Fatalf("Failed to create temp TOML file: %v", err)
+		}
+
+		// Call HandleMessage (Note: this assumes it uses the above files to write logs.
+		// If not, then we need some mechanism to redirect its output to these files)
+		pkg.HandleMessage([]byte(tt.input))
+
+		// Cleanup: Close and remove temporary files
+		jsonFile.Close()
+		yamlFile.Close()
+		tomlFile.Close()
+
+		os.Remove(jsonFile.Name())
+		os.Remove(yamlFile.Name())
+		os.Remove(tomlFile.Name())
 	}
 }

@@ -1,28 +1,31 @@
-name: Go Test
+name: Go CI
 
 on: [push, pull_request]
 
 jobs:
-
-  test:
-    name: Run Go Tests
+  build:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
-
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-<<<<<<< HEAD
-        go-version: ^1.21
-=======
-        go-version: ^1.17
->>>>>>> a34da62cae42bb25ea6d9e4b1c7336f594e46ae9
-
-    - name: Check out code into the Go module directory
+    - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Get dependencies
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.21  # specify the Go version
+
+    - name: Cache Go modules
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
       run: go mod download
 
-    - name: Run Test
-      run: go test
+    - name: Run tests
+      run: go test ./...
+

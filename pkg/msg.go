@@ -12,136 +12,105 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var LogBuffer bytes.Buffer
+type Record struct {
+	json *os.File
+	yaml *os.File
+	toml *os.File
+}
 
-func CheckError(err error) {
+func NewDataRecord(dir string) *Record {
+	return newRecord(dir, "data")
+}
+
+func NewAlertRecord(dir string) *Record {
+	return newRecord(dir, "alerts")
+}
+
+func newRecord(dir, baseFilename string) *Record {
+	r := &Record{}
+	r.json = openFile(path.Join(dir, baseFilename+".json"))
+	r.yaml = openFile(path.Join(dir, baseFilename+".yaml"))
+	r.toml = openFile(path.Join(dir, baseFilename+".toml"))
+	return r
+}
+
+func (record *Record) Save(data interface{}) {
+	// Save as JSON
+	jsonData, _ := json.MarshalIndent(data, "", "  ")
+	record.json.Write(jsonData)
+
+	// Save as YAML
+	yamlData, _ := yaml.Marshal(data)
+	record.yaml.Write(yamlData)
+
+	// Save as TOML
+	var buffer bytes.Buffer
+	encoder := toml.NewEncoder(&buffer)
+	encoder.Encode(data)
+	record.toml.Write(buffer.Bytes())
+}
+
+func openFile(filename string) *os.File {
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	CheckError(err)
+	return file
+}
+
+func CheckError(err error) error {
 	if err != nil {
-		LogBuffer.WriteString("Error: ")
-		os.Exit(0)
+		return err
 	}
+	return nil
 }
 
 func HandleMessage(rawMessage []byte) {
 	var msg Message
-	err := json.Unmarshal(rawMessage, &msg) // Parse the message
+	err := json.Unmarshal(rawMessage, &msg)
 	if err != nil {
-		LogBuffer.WriteString("Error parsing message:")
 		println("Error parsing message:", err)
 		return
 	}
 
-	switch msg.Type { // Check the message type
+	switch msg.Type {
 	case "alert":
 		var alertPayload Alert
-		err = json.Unmarshal(msg.Payload, &alertPayload) // Parse the payload
+		err = json.Unmarshal(msg.Payload, &alertPayload)
 		if err != nil {
-			LogBuffer.WriteString("Error parsing alert payload:")
 			println("Error parsing alert payload:", err)
 			return
 		}
-		handleAlert(alertPayload) // Handle the alert
+		handleAlert(alertPayload)
 	case "data":
 		var dataPayload Data
-		err = json.Unmarshal(msg.Payload, &dataPayload) // Parse the payload
+		err = json.Unmarshal(msg.Payload, &dataPayload)
 		if err != nil {
-			LogBuffer.WriteString("Error parsing data payload:")
 			println("Error parsing data payload", err)
 			return
 		}
-		handleData(dataPayload) // Handle the data
+		handleData(dataPayload)
 	default:
 		fmt.Println("Unknown message type:", msg.Type)
 		return
 	}
 }
 
-// saveAsJSON saves data as JSON
-func saveAsJSON(directory string, filename string, data interface{}) error {
-	jsonData, err := json.MarshalIndent(data, "", "  ") // Indent the JSON
-	if err != nil {
-		return err
-	}
-	var filenameE = path.Join(directory, filename+".json")
-	file, err := os.OpenFile(filenameE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 064)
-	CheckError(err)
-	defer file.Close()
-	_, err = file.Write(jsonData)
-	return err
-}
-
-// saveAsYAML saves data as YAML
-func saveAsYAML(directory string, filename string, data interface{}) error {
-
-	yamlData, err := yaml.Marshal(data) // Convert the data to YAML
-	if err != nil {
-		return err
-	}
-	var filenameE = path.Join(directory, filename+".yaml")
-	file, err := os.OpenFile(filenameE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 064)
-	CheckError(err)
-	defer file.Close()
-	_, err = file.Write(yamlData)
-	return err
-}
-
-// saveAsTOML saves data as TOML
-func saveAsTOML(directory string, filename string, data interface{}) error {
-	var buffer bytes.Buffer             // Create a buffer to write to
-	encoder := toml.NewEncoder(&buffer) // Create a new encoder
-	if err := encoder.Encode(data); err != nil {
-		return err
-	}
-	var filenameE = path.Join(directory, filename+".toml")
-	file, err := os.OpenFile(filenameE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 064)
-	CheckError(err)
-	defer file.Close()
-	_, err = file.Write(buffer.Bytes())
-	return err
-}
-
-// handleMessage handles a message
 func handleAlert(payload Alert) {
 	timestamp := time.Unix(payload.Date, 0)
 	fmt.Printf("Alert received at %s: %s\n", timestamp, payload.Event)
-
-	// Save as JSON
-	if err := saveAsJSON("alerts", "alerts", payload); err != nil {
-		LogBuffer.WriteString("Error saving JSON:")
-		println("Error saving JSON:", err)
-	}
-
-	// Save as YAML
-	if err := saveAsYAML("alerts", "alerts", payload); err != nil {
-		LogBuffer.WriteString("Error saving YAML:")
-		println("Error YAML", err)
-	}
-
-	// Save as TOML
-	if err := saveAsTOML("alerts", "alerts", payload); err != nil {
-		LogBuffer.WriteString("Error saving TOML:")
-		println("Error saving TOML:", err)
-	}
+	record := NewAlertRecord("alerts")
+	defer closeFiles(record)
+	record.Save(payload)
 }
 
-// handleData handles a data payload
 func handleData(payload Data) {
 	fmt.Printf("Data received: %s = %f\n", payload.Name, payload.Value)
+	record := NewDataRecord("data")
+	defer closeFiles(record)
+	record.Save(payload)
+}
 
-	// Save as JSON
-	if err := saveAsJSON("data", "data", payload); err != nil {
-		LogBuffer.WriteString("Error saving JSON:")
-		println("Error saving JSON:", err)
-	}
-
-	// Save as YAML
-	if err := saveAsYAML("data", "data", payload); err != nil {
-		LogBuffer.WriteString("Error saving YAML:")
-		println("Error savings YAML:", err)
-	}
-
-	// Save as TOML
-	if err := saveAsTOML("data", "data", payload); err != nil {
-		LogBuffer.WriteString("Error saving TOML:")
-		println("Error saving TOML:", err)
-	}
+func closeFiles(r *Record) {
+	r.json.Close()
+	r.yaml.Close()
+	r.toml.Close()
 }

@@ -10,7 +10,6 @@ import (
 func startTCP() {
 	listener, err := net.Listen("tcp", ":8080") // Listens on port 8080
 	if err != nil {
-		LogBuffer.WriteString("Error: ")
 		println("Error starting TCP:", err)
 		return
 	}
@@ -19,7 +18,6 @@ func startTCP() {
 	for {
 		conn, err := listener.Accept() // Wait for a connection
 		if err != nil {
-			LogBuffer.WriteString("Error: ")
 			println("Error starting TCP connection:", err)
 			continue
 		}
@@ -31,14 +29,12 @@ func startTCP() {
 func startUDP() {
 	addr, err := net.ResolveUDPAddr("udp", ":8081") // Listens on port 8081
 	if err != nil {
-		LogBuffer.WriteString("Error: ")
 		println("Error starting UDP server:", err)
 		return
 	}
 
 	conn, err := net.ListenUDP("udp", addr) // Listen on the port
 	if err != nil {
-		LogBuffer.WriteString("Error: ")
 		println("Error starting UDP listener:", err)
 		return
 	}
@@ -49,7 +45,6 @@ func startUDP() {
 	for {
 		n, _, err := conn.ReadFromUDP(buf) // Read from the connection
 		if err != nil {
-			LogBuffer.WriteString("Error: ")
 			println("Error starting UDP connection:", err)
 			continue
 		}
@@ -72,7 +67,6 @@ func handleMsg(conn net.Conn) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			LogBuffer.WriteString("Error: ")
 			println("Error scanning:", err)
 			return
 		}
@@ -84,7 +78,6 @@ func handleMsg(conn net.Conn) {
 		buf := make([]byte, 1024)
 		n, _, err := udpConn.ReadFromUDP(buf)
 		if err != nil {
-			LogBuffer.WriteString("Error: ")
 			println("Error starting UDP connection")
 			return
 		}
@@ -96,6 +89,5 @@ func handleMsg(conn net.Conn) {
 	}
 
 	// Unsupported connection type
-	LogBuffer.WriteString("Unsupported connection type: ")
 	println("Unsupported connection type: ")
 }
