@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
+	"strings"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
@@ -18,50 +18,93 @@ type Record struct {
 	toml *os.File
 }
 
-func NewDataRecord(dir string) *Record {
-	return newRecord(dir, "data")
+func (r *Record) CloseAll() {
+	if r.json != nil {
+		r.json.Close()
+	}
+	if r.yaml != nil {
+		r.yaml.Close()
+	}
+	if r.toml != nil {
+		r.toml.Close()
+	}
 }
 
-func NewAlertRecord(dir string) *Record {
-	return newRecord(dir, "alerts")
+func NewAlertRecord() (*Record, error) {
+	return NewRecord([]string{
+		"./alert/alert.json",
+		"./alert/alert.yaml",
+		"./alert/alert.toml",
+	})
 }
 
-func newRecord(dir, baseFilename string) *Record {
+func NewDataRecord() (*Record, error) {
+	return NewRecord([]string{
+		"./data/data.json",
+		"./data/data.yaml",
+		"./data/data.toml",
+	})
+}
+
+func NewRecord(files []string) (*Record, error) {
 	r := &Record{}
-	r.json = openFile(path.Join(dir, baseFilename+".json"))
-	r.yaml = openFile(path.Join(dir, baseFilename+".yaml"))
-	r.toml = openFile(path.Join(dir, baseFilename+".toml"))
-	return r
+
+	for _, file := range files {
+		var f *os.File
+		var err error
+
+		f, err = os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			r.CloseAll()
+			return nil, err
+		}
+
+		switch {
+		case strings.HasSuffix(file, ".json"):
+			r.json = f
+		case strings.HasSuffix(file, ".yaml"):
+			r.yaml = f
+		case strings.HasSuffix(file, ".toml"):
+			r.toml = f
+		}
+	}
+
+	return r, nil
 }
 
-func (record *Record) Save(data interface{}) {
+// SaveMessage saves data in all three file formats.
+func SaveMessage(data interface{}, fileType string, record *Record) {
 	// Save as JSON
-	jsonData, _ := json.MarshalIndent(data, "", "  ")
-	record.json.Write(jsonData)
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err == nil && record.json != nil {
+		_, err = record.json.Write(jsonData)
+		if err != nil {
+			fmt.Println("Error writing JSON data:", err)
+		}
+	}
 
 	// Save as YAML
-	yamlData, _ := yaml.Marshal(data)
-	record.yaml.Write(yamlData)
+	yamlData, err := yaml.Marshal(data)
+	if err == nil && record.yaml != nil {
+		_, err = record.yaml.Write(yamlData)
+		if err != nil {
+			fmt.Println("Error writing YAML data:", err)
+		}
+	}
 
 	// Save as TOML
 	var buffer bytes.Buffer
 	encoder := toml.NewEncoder(&buffer)
-	encoder.Encode(data)
-	record.toml.Write(buffer.Bytes())
-}
-
-func openFile(filename string) *os.File {
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	CheckError(err)
-	return file
-}
-
-func CheckError(err error) error {
-	if err != nil {
-		return err
+	if err := encoder.Encode(data); err == nil && record.toml != nil {
+		_, err = record.toml.Write(buffer.Bytes())
+		if err != nil {
+			fmt.Println("Error writing TOML data:", err)
+		}
 	}
-	return nil
 }
+
+var alertRecord, _ = NewAlertRecord()
+var dataRecord, _ = NewDataRecord()
 
 func HandleMessage(rawMessage []byte) {
 	var msg Message
@@ -79,7 +122,11 @@ func HandleMessage(rawMessage []byte) {
 			println("Error parsing alert payload:", err)
 			return
 		}
-		handleAlert(alertPayload)
+		timestamp := time.Unix(alertPayload.Date, 0)
+		fmt.Printf("Alert received at %s: %s\n", timestamp, alertPayload.Event)
+
+		SaveMessage(alertPayload, "alert", alertRecord)
+
 	case "data":
 		var dataPayload Data
 		err = json.Unmarshal(msg.Payload, &dataPayload)
@@ -87,30 +134,13 @@ func HandleMessage(rawMessage []byte) {
 			println("Error parsing data payload", err)
 			return
 		}
-		handleData(dataPayload)
+
+		fmt.Printf("Data received: %s = %f\n", dataPayload.Name, dataPayload.Value)
+
+		SaveMessage(dataPayload, "data", dataRecord)
+
 	default:
 		fmt.Println("Unknown message type:", msg.Type)
 		return
 	}
-}
-
-func handleAlert(payload Alert) {
-	timestamp := time.Unix(payload.Date, 0)
-	fmt.Printf("Alert received at %s: %s\n", timestamp, payload.Event)
-	record := NewAlertRecord("alerts")
-	defer closeFiles(record)
-	record.Save(payload)
-}
-
-func handleData(payload Data) {
-	fmt.Printf("Data received: %s = %f\n", payload.Name, payload.Value)
-	record := NewDataRecord("data")
-	defer closeFiles(record)
-	record.Save(payload)
-}
-
-func closeFiles(r *Record) {
-	r.json.Close()
-	r.yaml.Close()
-	r.toml.Close()
 }

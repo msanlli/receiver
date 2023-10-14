@@ -1,25 +1,23 @@
 package pkg
 
 import (
-	"encoding/json"
+	"sync"
 )
 
-type Message struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
-}
-
-type Alert struct {
-	Date  int64  `json:"date"`
-	Event string `json:"event"`
-}
-
-type Data struct {
-	Name  string  `json:"name"`
-	Value float32 `json:"value"`
-}
-
 func Main() {
-	go startTCP()
-	startUDP()
+	// A wait group is implemented in order to wait for all goroutines to finish
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		startTCP()
+		wg.Done()
+	}()
+
+	go func() {
+		startUDP()
+		wg.Done()
+	}()
+
+	wg.Wait()
 }
