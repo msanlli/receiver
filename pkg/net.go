@@ -25,7 +25,7 @@ type Data struct {
 // startTCP starts a TCP listener
 func startTCP() {
 	fmt.Println("Starting TCP listener")
-	addrTCP, err := net.ResolveTCPAddr("tcp", ":8080") // Listens on port 8080
+	addrTCP, err := net.ResolveTCPAddr("tcp", ":8080")
 	if err != nil {
 		println("Error starting UDP server:", err)
 		return
@@ -36,11 +36,11 @@ func startTCP() {
 		println("Error starting TCP:", err)
 		return
 	}
-	defer listener.Close() // Close the listener when the function returns
+	defer listener.Close()
 
 	for {
 		fmt.Printf("Listening on %s\n", listener.Addr().String())
-		conn, err := listener.Accept() // Wait for a connection
+		conn, err := listener.Accept()
 		if err != nil {
 			println("Error starting TCP connection:", err)
 			continue

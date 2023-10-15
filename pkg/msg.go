@@ -75,12 +75,13 @@ func NewRecord(files []string) (*Record, error) {
 // SaveMessage saves data in all three file formats.
 func SaveMessage(data interface{}, fileType string, record *Record) {
 	// Save as JSON
-	jsonData, err := json.MarshalIndent(data, "", "  ")
+	jsonData, err := json.MarshalIndent(data, "", "")
 	if err == nil && record.json != nil {
 		_, err = record.json.Write(jsonData)
 		if err != nil {
 			fmt.Println("Error writing JSON data:", err)
 		}
+		record.json.WriteString("\n")
 	}
 
 	// Save as YAML
