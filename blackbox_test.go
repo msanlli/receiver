@@ -139,3 +139,51 @@ func TestBlackbox(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func Benchmark(b *testing.B) {
+	// Start the program in the background
+	go main()
+
+	// Give some time for servers to start
+	time.Sleep(5 * time.Second)
+
+	// Run the benchmark loop
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tcpMessages := []string{
+			`{"type":"alert","payload":{"date":1673782920,"event":"fire detected"}}`,
+			`{"type":"data","payload":{"name":"temperature","value":23.5}}`,
+		}
+
+		udpMessages := []string{
+			`{"type":"alert","payload":{"date":1673782920,"event":"fire detected"}}`,
+			`{"type":"data","payload":{"name":"temperature","value":23.5}}`,
+		}
+
+		// Send TCP messages
+		for _, msg := range tcpMessages {
+			conn, err := net.Dial("tcp", "localhost:8080")
+			if err != nil {
+				b.Fatalf("failed to connect to TCP server: %v", err)
+			}
+			_, err = conn.Write([]byte(msg))
+			if err != nil {
+				b.Fatalf("failed to send TCP message: %v", err)
+			}
+			conn.Close()
+		}
+
+		// Send UDP messages
+		for _, msg := range udpMessages {
+			conn, err := net.Dial("udp", "localhost:8081")
+			if err != nil {
+				b.Fatalf("failed to connect to UDP server: %v", err)
+			}
+			_, err = conn.Write([]byte(msg))
+			if err != nil {
+				b.Fatalf("failed to send UDP message: %v", err)
+			}
+			conn.Close()
+		}
+	}
+}
