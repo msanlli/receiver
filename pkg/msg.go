@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// The struct is used to open, parse and save data to files.
 type Record struct {
 	json *os.File
 	yaml *os.File
@@ -46,6 +47,7 @@ func NewDataRecord() (*Record, error) {
 	})
 }
 
+// NewRecord opens all the files and returns a Record struct.
 func NewRecord(files []string) (*Record, error) {
 	r := &Record{}
 
@@ -107,6 +109,7 @@ func SaveMessage(data interface{}, fileType string, record *Record) {
 var alertRecord, _ = NewAlertRecord()
 var dataRecord, _ = NewDataRecord()
 
+// HandleMessage handles a message received from the network and distinguises between alert and data messages.
 func HandleMessage(rawMessage []byte) {
 	var msg Message
 	err := json.Unmarshal(rawMessage, &msg)

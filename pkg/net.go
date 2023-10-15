@@ -7,6 +7,8 @@ import (
 	"net"
 )
 
+// Message is a struct that describes the different message formats that can be
+// received and its parts.
 type Message struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
@@ -71,12 +73,11 @@ func startUDP() {
 	}
 }
 
-// handleTCP handles a TCP connection
 func handleTCP(conn net.Conn) {
-	scanner := bufio.NewScanner(conn) // Create a scanner
-	for scanner.Scan() {              // Scan the connection
-		rawMessage := scanner.Bytes() // Get the message as bytes
-		HandleMessage(rawMessage)     // Handle the message
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		rawMessage := scanner.Bytes()
+		HandleMessage(rawMessage)
 		fmt.Println("TCP Message Received:", scanner.Text())
 	}
 
@@ -87,7 +88,6 @@ func handleTCP(conn net.Conn) {
 }
 
 func handleUDP(conn net.Conn) {
-	// Handle UDP messages
 	if udpConn, ok := conn.(*net.UDPConn); ok {
 		buf := make([]byte, 1024)
 		n, _, err := udpConn.ReadFromUDP(buf)
