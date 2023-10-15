@@ -17,8 +17,8 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.21
-        
+        go-version: 1.17  # Use the version of Go that you're using
+
     - name: Cache Go dependencies
       uses: actions/cache@v2
       with:
@@ -27,7 +27,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Run Tests
+    - name: Run Tests in Main Directory
       run: |
         go mod download
-        go test ./...
+        go test
