@@ -34,7 +34,54 @@ func checkFiles(file string, expectedContent string) error {
 
 func TestBlackbox(t *testing.T) {
 
-	go pkg.Main()
+	//Creating new temp test files in "./" .
+	jsonAlert, err := os.CreateTemp("", "*.json")
+	if err != nil {
+		fmt.Printf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(jsonAlert.Name())
+
+	yamlAlert, err := os.CreateTemp("", "*.yaml")
+	if err != nil {
+		fmt.Printf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(yamlAlert.Name())
+
+	tomlAlert, err := os.CreateTemp("", "*.toml")
+	if err != nil {
+		fmt.Printf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tomlAlert.Name())
+
+	jsonData, err := os.CreateTemp("", "*.json")
+	if err != nil {
+		fmt.Printf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(jsonData.Name())
+
+	yamlData, err := os.CreateTemp("", "*.yaml")
+	if err != nil {
+		fmt.Printf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(yamlData.Name())
+
+	tomlData, err := os.CreateTemp("", "*.toml")
+	if err != nil {
+		fmt.Printf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tomlData.Name())
+
+	testDir := []string{
+		jsonAlert.Name(),
+		yamlAlert.Name(),
+		tomlAlert.Name(),
+		jsonData.Name(),
+		yamlData.Name(),
+		tomlData.Name(),
+	}
+
+	// The main function is called.
+	go pkg.Main(testDir)
 
 	time.Sleep(5 * time.Second)
 
@@ -120,70 +167,23 @@ func TestBlackbox(t *testing.T) {
 		},
 	}
 
-	if err := checkFiles("./alert/alert.json", expectedContents["alert"]["json"]); err != nil {
+	if err := checkFiles(jsonAlert.Name(), expectedContents["alert"]["json"]); err != nil {
 		t.Error(err)
 	}
-	if err := checkFiles("./data/data.json", expectedContents["data"]["json"]); err != nil {
+	if err := checkFiles(yamlAlert.Name(), expectedContents["alert"]["yaml"]); err != nil {
 		t.Error(err)
 	}
-	if err := checkFiles("./alert/alert.yaml", expectedContents["alert"]["yaml"]); err != nil {
+	if err := checkFiles(tomlAlert.Name(), expectedContents["alert"]["toml"]); err != nil {
 		t.Error(err)
 	}
-	if err := checkFiles("./data/data.yaml", expectedContents["data"]["yaml"]); err != nil {
+
+	if err := checkFiles(jsonData.Name(), expectedContents["data"]["json"]); err != nil {
 		t.Error(err)
 	}
-	if err := checkFiles("./alert/alert.toml", expectedContents["alert"]["toml"]); err != nil {
+	if err := checkFiles(yamlData.Name(), expectedContents["data"]["yaml"]); err != nil {
 		t.Error(err)
 	}
-	if err := checkFiles("./data/data.toml", expectedContents["data"]["toml"]); err != nil {
+	if err := checkFiles(tomlData.Name(), expectedContents["data"]["toml"]); err != nil {
 		t.Error(err)
-	}
-}
-
-func Benchmark(b *testing.B) {
-	// Start the program in the background
-	go main()
-
-	// Give some time for servers to start
-	time.Sleep(5 * time.Second)
-
-	// Run the benchmark loop
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		tcpMessages := []string{
-			`{"type":"alert","payload":{"date":1673782920,"event":"fire detected"}}`,
-			`{"type":"data","payload":{"name":"temperature","value":23.5}}`,
-		}
-
-		udpMessages := []string{
-			`{"type":"alert","payload":{"date":1673782920,"event":"fire detected"}}`,
-			`{"type":"data","payload":{"name":"temperature","value":23.5}}`,
-		}
-
-		// Send TCP messages
-		for _, msg := range tcpMessages {
-			conn, err := net.Dial("tcp", "localhost:8080")
-			if err != nil {
-				b.Fatalf("failed to connect to TCP server: %v", err)
-			}
-			_, err = conn.Write([]byte(msg))
-			if err != nil {
-				b.Fatalf("failed to send TCP message: %v", err)
-			}
-			conn.Close()
-		}
-
-		// Send UDP messages
-		for _, msg := range udpMessages {
-			conn, err := net.Dial("udp", "localhost:8081")
-			if err != nil {
-				b.Fatalf("failed to connect to UDP server: %v", err)
-			}
-			_, err = conn.Write([]byte(msg))
-			if err != nil {
-				b.Fatalf("failed to send UDP message: %v", err)
-			}
-			conn.Close()
-		}
 	}
 }

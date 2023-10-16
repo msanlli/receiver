@@ -31,20 +31,14 @@ func (r *Record) CloseAll() {
 	}
 }
 
-func NewAlertRecord() (*Record, error) {
-	return NewRecord([]string{
-		"./alert/alert.json",
-		"./alert/alert.yaml",
-		"./alert/alert.toml",
-	})
+func NewAlertRecord(dir []string) (*Record, error) {
+	alertDir := dir[0:3]
+	return NewRecord(alertDir)
 }
 
-func NewDataRecord() (*Record, error) {
-	return NewRecord([]string{
-		"./data/data.json",
-		"./data/data.yaml",
-		"./data/data.toml",
-	})
+func NewDataRecord(dir []string) (*Record, error) {
+	dataDir := dir[3:6]
+	return NewRecord(dataDir)
 }
 
 // NewRecord opens all the files and returns a Record struct.
@@ -106,11 +100,9 @@ func SaveMessage(data interface{}, fileType string, record *Record) {
 	}
 }
 
-var alertRecord, _ = NewAlertRecord()
-var dataRecord, _ = NewDataRecord()
-
-// HandleMessage handles a message received from the network and distinguises between alert and data messages.
-func HandleMessage(rawMessage []byte) {
+// HandleMessage handles a message received from the network
+// and distinguises between alert and data messages.
+func HandleMessage(rawMessage []byte, alertfiles, datafiles *Record) {
 	var msg Message
 	err := json.Unmarshal(rawMessage, &msg)
 	if err != nil {
@@ -129,7 +121,7 @@ func HandleMessage(rawMessage []byte) {
 		timestamp := time.Unix(alertPayload.Date, 0)
 		fmt.Printf("Alert received at %s: %s\n", timestamp, alertPayload.Event)
 
-		SaveMessage(alertPayload, "alert", alertRecord)
+		SaveMessage(alertPayload, "alert", alertfiles)
 
 	case "data":
 		var dataPayload Data
@@ -141,7 +133,7 @@ func HandleMessage(rawMessage []byte) {
 
 		fmt.Printf("Data received: %s = %f\n", dataPayload.Name, dataPayload.Value)
 
-		SaveMessage(dataPayload, "data", dataRecord)
+		SaveMessage(dataPayload, "data", datafiles)
 
 	default:
 		fmt.Println("Unknown message type:", msg.Type)

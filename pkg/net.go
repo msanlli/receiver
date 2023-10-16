@@ -9,6 +9,7 @@ import (
 
 // Message is a struct that describes the different message formats that can be
 // received and its parts.
+
 type Message struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
@@ -25,7 +26,7 @@ type Data struct {
 }
 
 // startTCP starts a TCP listener
-func startTCP() {
+func startTCP(alertfiles, datafiles *Record) {
 	fmt.Println("Starting TCP listener")
 	addrTCP, err := net.ResolveTCPAddr("tcp", ":8080")
 	if err != nil {
@@ -47,12 +48,12 @@ func startTCP() {
 			println("Error starting TCP connection:", err)
 			continue
 		}
-		handleTCP(conn) // Handle connection in a new goroutine
+		handleTCP(conn, alertfiles, datafiles) // Handle connection in a new goroutine
 	}
 }
 
 // startUDP starts a UDP listener
-func startUDP() {
+func startUDP(alertfiles, datafiles *Record) {
 	fmt.Println("Starting UDP listener")
 	addrUDP, err := net.ResolveUDPAddr("udp", ":8081") // Listens on port 8081
 	if err != nil {
@@ -69,15 +70,15 @@ func startUDP() {
 
 	for {
 		fmt.Printf("Listening on %s\n", listener.LocalAddr().String())
-		handleUDP(listener) // Handle the received data
+		handleUDP(listener, alertfiles, datafiles) // Handle the received data
 	}
 }
 
-func handleTCP(conn net.Conn) {
+func handleTCP(conn net.Conn, alertfiles, datafiles *Record) {
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		rawMessage := scanner.Bytes()
-		HandleMessage(rawMessage)
+		HandleMessage(rawMessage, alertfiles, datafiles)
 		fmt.Println("TCP Message Received:", scanner.Text())
 	}
 
@@ -87,7 +88,7 @@ func handleTCP(conn net.Conn) {
 	}
 }
 
-func handleUDP(conn net.Conn) {
+func handleUDP(conn net.Conn, alertfiles, datafiles *Record) {
 	if udpConn, ok := conn.(*net.UDPConn); ok {
 		buf := make([]byte, 1024)
 		n, _, err := udpConn.ReadFromUDP(buf)
@@ -97,7 +98,7 @@ func handleUDP(conn net.Conn) {
 		}
 
 		rawMessage := buf[:n]
-		HandleMessage(rawMessage)
+		HandleMessage(rawMessage, alertfiles, datafiles)
 		fmt.Println("UDP Message Received:", string(rawMessage))
 		return
 	}
